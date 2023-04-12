@@ -20,7 +20,7 @@ class BasicBlock(object):
         else:
             self.instrs = []
         try:
-            self.target = self.instrs[-1].target
+            self.target = self.instrs[-1].target # exclude case with call as last instruction
         except Exception:
             self.target = None
         if labels:

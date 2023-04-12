@@ -71,6 +71,7 @@ class Parser:
 
     @logger
     def factor(self, symtab):
+        '''F -> var | const | ( E )'''
         if self.accept('ident'):
             var = symtab.find(self.value)
             offs = self.array_offset(symtab)
