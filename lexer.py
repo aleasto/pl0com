@@ -28,6 +28,7 @@ TOKEN_DEFS = {
     'becomes': [':='],
     'thensym': ['then'],
     'elsesym': ['else'],
+    'elifsym': ['elif'],
     'dosym': ['do'],
     'constsym': ['const'],
     'comma': [','],

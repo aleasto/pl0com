@@ -428,10 +428,13 @@ class CallStat(Stat):
 
 
 class IfStat(Stat):
-    def __init__(self, parent=None, cond=None, thenpart=None, elsepart=None, symtab=None):
+    def __init__(self, parent=None, cond=None, thenpart=None, elifs=[], elsepart=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.cond = cond
         self.thenpart = thenpart
+        if len(elifs) > 0:
+            eliff = elifs[0]
+            elsepart = IfStat(parent=self, cond=eliff[0], thenpart=eliff[1], elifs=elifs[1:], elsepart=elsepart, symtab=None)
         self.elsepart = elsepart
         self.cond.parent = self
         self.thenpart.parent = self

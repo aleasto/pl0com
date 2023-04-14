@@ -155,10 +155,13 @@ class Parser:
             cond = self.condition(symtab)
             self.expect('thensym')
             then = self.statement(symtab)
+            elifs = []
+            while self.accept('elifsym'):
+                elifs.append([self.condition(symtab), self.statement(symtab)])
             els = None
             if self.accept('elsesym'):
                 els = self.statement(symtab)
-            return ir.IfStat(cond=cond, thenpart=then, elsepart=els, symtab=symtab)
+            return ir.IfStat(cond=cond, thenpart=then, elifs=elifs, elsepart=els, symtab=symtab)
         elif self.accept('whilesym'):
             cond = self.condition(symtab)
             self.expect('dosym')
