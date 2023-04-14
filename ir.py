@@ -186,7 +186,7 @@ class IRNode:  # abstract
             pass
 
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'loop_var', 'from_exp', 'to_exp', 'step_exp'} & set(dir(self))
 
         res = repr(type(self)) + ' ' + repr(id(self)) + ' {\n'
         if self.parent is not None:
@@ -214,7 +214,7 @@ class IRNode:  # abstract
 
     def navigate(self, action):
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'loop_var', 'from_exp', 'to_exp', 'step_exp'} & set(dir(self))
         if 'children' in dir(self) and len(self.children):
             print('navigating children of', type(self), id(self), len(self.children))
             for node in self.children:
@@ -236,7 +236,7 @@ class IRNode:  # abstract
             self.children[self.children.index(old)] = new
             return True
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'loop_var', 'from_exp', 'to_exp', 'step_exp'} & set(dir(self))
         for d in attrs:
             try:
                 if getattr(self, d) == old:
@@ -481,17 +481,49 @@ class WhileStat(Stat):
 
 
 class ForStat(Stat):  # incomplete
-    def __init__(self, parent=None, init=None, cond=None, step=None, body=None, symtab=None):
+    def __init__(self, parent=None, loop_var=None, from_exp=None, to_exp=None, step_exp=None, body=None, symtab=None):
         super().__init__(parent, [], symtab)
-        self.init = init
-        self.cond = cond
-        self.step = step
+        self.loop_var = loop_var
+        self.loop_var_sym = loop_var.symbol
+        self.from_exp = from_exp
+        self.to_exp = to_exp
+        self.step_exp = step_exp
         self.body = body
-        self.init.parent = self
-        self.cond.parent = self
-        self.step.parent = self
+        self.loop_var.parent = self
+        self.from_exp.parent = self
+        self.to_exp.parent = self
+        if self.step_exp:
+            self.step_exp.parent = self
         self.body.parent = self
 
+    def lower(self):
+        ### i = from
+        # [eval from]
+        init = StoreStat(dest=self.loop_var_sym, symbol=self.from_exp.destination(), symtab=self.symtab)
+
+        ### if i <= to
+        comp_label = TYPENAMES['label']()
+        comp_stat = EmptyStat(self.parent, symtab=self.symtab)
+        comp_stat.set_label(comp_label)
+        # [eval to]
+        # [load i]
+        comp = BinStat(dest=new_temporary(self.symtab, TYPENAMES["int"]), op="gtr", srca=self.loop_var.destination(), srcb=self.to_exp.destination())
+        exit_label = TYPENAMES['label']()
+        exit_stat = EmptyStat(self.parent, symtab=self.symtab)
+        exit_stat.set_label(exit_label)
+        branch_out = BranchStat(cond=comp.destination(), target=exit_label, symtab=self.symtab)
+
+        # [body]
+
+        ### i += step
+        # [eval step]
+        # [load loop_var]
+        step_sum = BinStat(dest=self.loop_var.destination(), op='plus', srca=self.loop_var.destination(), srcb=self.step_exp.destination())
+        loop_var_store = StoreStat(dest=self.loop_var_sym, symbol=self.loop_var.destination(), symtab=self.symtab)
+        jump_back = BranchStat(target=comp_label, symtab=self.symtab)
+        return self.parent.replace(self, StatList(children=[self.from_exp, init, comp_stat, self.to_exp, self.loop_var, comp, branch_out,
+                                                            self.body, self.step_exp, self.loop_var, step_sum, loop_var_store,
+                                                            jump_back, exit_stat], symtab=self.symtab))
 
 class AssignStat(Stat):
     def __init__(self, parent=None, target=None, offset=None, expr=None, symtab=None):

@@ -37,7 +37,10 @@ TOKEN_DEFS = {
     'period': ['.'],
     'oddsym': ['odd'],
     'print': ['!', 'print'],
-    'read': ['?', 'read']
+    'read': ['?', 'read'],
+    'forsym': ['for'],
+    'tosym': ['to'],
+    'stepsym': ['step'],
 }
 
 
