@@ -1,0 +1,15 @@
+VAR x;
+
+BEGIN
+   FOR x := 3 to 7 step 1 BEGIN
+      print x
+   END;
+
+   IF x = 3 THEN BEGIN
+      print -1
+   END ELIF x = 8 BEGIN
+      print -2
+   END ELSE BEGIN
+      print -3
+   END
+END. 
