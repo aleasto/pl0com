@@ -142,7 +142,14 @@ class Parser:
 
         elif self.accept('callsym'):
             self.expect('ident')
-            return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(self.value), symtab=symtab), symtab=symtab)
+            fn_name = self.value
+            params = []
+            if self.accept('lparen'):
+                params.append(self.expression(symtab))
+                while self.accept('comma'):
+                    params.append(self.expression(symtab))
+                self.expect('rparen')
+            return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(fn_name), parameters=params, symtab=symtab), symtab=symtab)
         elif self.accept('beginsym'):
             statement_list = ir.StatList(symtab=symtab)
             statement_list.append(self.statement(symtab))
@@ -193,15 +200,19 @@ class Parser:
         local_vars = ir.SymbolTable()
         defs = ir.DefinitionList()
 
-        while self.accept('constsym') or self.accept('varsym'):
+        while self.accept('constsym') or self.accept('varsym') or self.accept('paramsym'):
             if self.sym == 'constsym':
                 self.constdef(local_vars, alloct)
                 while self.accept('comma'):
                     self.constdef(local_vars, alloct)
-            else:
+            elif self.sym == 'varsym':
                 self.vardef(local_vars, alloct)
                 while self.accept('comma'):
                     self.vardef(local_vars, alloct)
+            else:
+                self.vardef(local_vars, 'param')
+                while self.accept('comma'):
+                    self.vardef(local_vars, 'param')
             self.expect('semicolon')
 
         while self.accept('procsym'):

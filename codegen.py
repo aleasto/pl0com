@@ -33,6 +33,10 @@ def symbol_codegen(self, regalloc):
         return ""
     if not isinstance(self.allocinfo, LocalSymbolLayout):
         return '\t.comm ' + self.allocinfo.symname + ', ' + repr(self.allocinfo.bsize) + "\n"
+    elif type(self.allocinfo) == ParameterSymbolLayout:
+        return '\t.equ ' + self.allocinfo.symname + '_caller , ' + repr(self.allocinfo.fpreloff) + "\n" + \
+               '\t.equ ' + self.allocinfo.symname + '_callee , ' + repr(self.allocinfo.fpreloff + (4+9)*4) + "\n"
+                                                                    # jump over 4 caller saved, 9 callee saved registers
     else:
         return '\t.equ ' + self.allocinfo.symname + ', ' + repr(self.allocinfo.fpreloff) + "\n"
 
@@ -264,6 +268,11 @@ def storestat_codegen(self, regalloc):
         ai = self.dest.allocinfo
         if type(ai) is LocalSymbolLayout:
             dest = '[' + get_register_string(REG_FP) + ', #' + ai.symname + ']'
+        elif type(ai) is ParameterSymbolLayout:
+            if self.dest in self.symtab: # callee
+                dest = '[' + get_register_string(REG_FP) + ', #' + ai.symname + '_callee]'
+            else: # caller
+                dest = '[' + get_register_string(REG_SP) + ', #' + ai.symname + '_caller]'
         else:
             lab, tmp = new_local_const(ai.symname)
             trail += tmp
@@ -296,6 +305,11 @@ def loadstat_codegen(self, regalloc):
         ai = self.symbol.allocinfo
         if type(ai) is LocalSymbolLayout:
             src = '[' + get_register_string(REG_FP) + ', #' + ai.symname + ']'
+        elif type(ai) is ParameterSymbolLayout:
+            if self.symbol in self.symtab: # callee
+                src = '[' + get_register_string(REG_FP) + ', #' + ai.symname + '_callee]'
+            else: # caller
+                src = '[' + get_register_string(REG_SP) + ', #' + ai.symname + '_caller]'
         else:
             lab, tmp = new_local_const(ai.symname)
             trail += tmp

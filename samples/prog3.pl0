@@ -1,0 +1,19 @@
+VAR ret, foo;
+
+PROCEDURE square;
+PARAMS x, y;
+BEGIN
+   print y;
+   y := 12;
+   print y;
+
+   print x;
+   ret := x * x
+END;
+
+BEGIN
+   foo := 25;
+   CALL square (1+2, foo);
+   print foo;
+   print ret
+END.

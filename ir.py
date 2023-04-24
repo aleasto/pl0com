@@ -254,6 +254,23 @@ class IRNode:  # abstract
         else:
             return self.parent.get_function()
 
+    def get_block(self):
+        if not self.parent:
+            return self # tree root is a block
+        elif type(self.parent) == Block:
+            return self.parent
+        else:
+            return self.parent.get_block()
+
+    def find_function_in_scope(self, symbol):
+        enclosing_block = self.get_block()
+        for f in enclosing_block.defs.children:
+            if symbol == f.symbol:
+                return f
+        if enclosing_block.parent is None:
+            return None
+        return enclosing_block.find_function_in_scope(symbol)
+
     def get_label(self):
         raise NotImplementedError
 
@@ -382,12 +399,30 @@ class CallExpr(Expr):
     def __init__(self, parent=None, function=None, parameters=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.symbol = function
-        # parameters are ignored
         if parameters:
             self.children = parameters[:]
+            for c in self.children:
+                c.parent = self
         else:
             self.children = []
 
+    def lower(self):
+        f = self.find_function_in_scope(self.symbol)
+        if f is None:
+            raise RuntimeError("Call to unknown function " + self.symbol.name)
+        params = [s for s in f.body.symtab if s.alloct == 'param']
+
+        if len(self.children) != len(params):
+            raise RuntimeError("Mismatching parameter count in call to " + self.symbol.name)
+
+        stores = []
+        for i, expr in enumerate(self.children):
+            stores.append(expr)
+            stores.append(StoreStat(dest=params[i], symbol=expr.destination(), symtab=self.symtab))
+
+        statements = StatList(self.parent, stores, self.symtab)
+        statements.symbol = self.symbol
+        return self.parent.replace(self, statements)
 
 # STATEMENTS
 
@@ -424,7 +459,7 @@ class CallStat(Stat):
     def lower(self):
         dest = self.call.symbol
         bst = BranchStat(target=dest, symtab=self.symtab, returns=True)
-        return self.parent.replace(self, bst)
+        return self.parent.replace(self, StatList(self.parent, [self.call, bst], self.symtab))
 
 
 class IfStat(Stat):

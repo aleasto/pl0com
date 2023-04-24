@@ -41,6 +41,7 @@ TOKEN_DEFS = {
     'forsym': ['for'],
     'tosym': ['to'],
     'stepsym': ['step'],
+    'paramsym': ['params'],
 }
 
 
