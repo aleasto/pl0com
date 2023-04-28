@@ -7,6 +7,8 @@ from functools import reduce
 
 from support import get_node_list
 
+import ir
+
 
 class BasicBlock(object):
     def __init__(self, next=None, instrs=None, labels=None):
@@ -19,10 +21,14 @@ class BasicBlock(object):
             self.instrs = instrs
         else:
             self.instrs = []
+        self.target = None
         try:
-            self.target = self.instrs[-1].target # exclude case with call as last instruction
+            last = self.instrs[-1]
+            # exclude case with call as last instruction
+            if type(last) == ir.BranchStat and not last.returns:
+                self.target = self.instrs[-1].target
         except Exception:
-            self.target = None
+            pass
         if labels:
             self.labels = labels
         else:
